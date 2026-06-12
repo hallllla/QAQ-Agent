@@ -1,0 +1,28 @@
+schema_version: 1
+module_path: ""
+title: LangGraph AI Agent 桌面应用
+scope:
+    - .gitignore
+    - forge.config.js
+    - index.html
+    - package-lock.json
+    - package.json
+    - tsconfig.json
+    - vite.main.config.mjs
+    - vite.preload.config.mjs
+    - vite.renderer.config.mjs
+    - 开发文档.md
+    - src/
+    - src\agent.ts
+    - src\main.ts
+    - src\preload.ts
+    - src\renderer\App.tsx
+    - src\renderer\components\ChatWindow.tsx
+    - src\renderer\components\MessageBubble.tsx
+    - src\renderer\components\SettingsPanel.tsx
+    - src\renderer\index.css
+    - src\renderer\main.tsx
+    - src\renderer\types.ts
+source_files: []
+depends_on: []
+related_to: []
