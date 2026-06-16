@@ -10,9 +10,17 @@
 - [tsconfig.json](file://tsconfig.json)
 - [src/main.ts](file://src/main.ts)
 - [src/preload.ts](file://src/preload.ts)
-- [src/renderer/main.tsx](file://src/renderer/main.tsx)
+- [src/renderer/main.ts](file://src/renderer/main.ts)
 - [开发文档.md](file://开发文档.md)
 </cite>
+
+## 更新摘要
+**所做更改**
+- 更新了构建系统现代化迁移：从 webpack 配置迁移到 Vite 配置
+- 更新了 vite.renderer.config.mjs 配置文件内容
+- 移除了旧的 webpack 相关配置和引用
+- 修正了渲染器入口文件路径从 main.tsx 到 main.ts 的变化
+- 更新了相关的配置示例和最佳实践
 
 ## 目录
 1. [简介](#简介)
@@ -29,37 +37,39 @@
 ## 简介
 本文件系统性地文档化 langGraph 项目中基于 Electron Forge 的 Vite 构建配置，重点解释三个独立的 Vite 配置文件在 Electron 主进程、预加载脚本和渲染器进程中的职责与差异，并结合 TypeScript 配置与 Vite 集成方式，给出优化建议、自定义扩展思路与常见问题排查方法。目标是帮助开发者理解并按需调整构建配置以满足特定业务场景。
 
+**更新** 本项目已完成从 webpack 到 Vite 的构建系统现代化迁移，提供了更高效的开发体验和更好的性能表现。
+
 ## 项目结构
 langGraph 使用 Electron Forge 的 Vite 插件统一管理三类产物：
 - 主进程（main）：运行 Electron 主线程逻辑，负责窗口创建、IPC、应用生命周期等。
 - 预加载脚本（preload）：在隔离上下文中暴露受控 API 给渲染器使用。
-- 渲染器（renderer）：React 应用，通过 Vite 进行开发与构建。
+- 渲染器（renderer）：Vue 应用，通过 Vite 进行开发与构建。
 
 Electron Forge 的插件配置将上述三类构建分别映射到对应的入口与 Vite 配置文件，形成清晰的职责边界。
 
 ```mermaid
 graph TB
-Forge["Electron Forge<br/>插件配置"] --> MainCfg["主进程 Vite 配置<br/>vite.main.config.mjs"]
+Forge["Electron Forge<br/>Vite 插件"] --> MainCfg["主进程 Vite 配置<br/>vite.main.config.mjs"]
 Forge --> PreloadCfg["预加载 Vite 配置<br/>vite.preload.config.mjs"]
 Forge --> RendererCfg["渲染器 Vite 配置<br/>vite.renderer.config.mjs"]
 MainCfg --> MainEntry["主进程入口<br/>src/main.ts"]
 PreloadCfg --> PreloadEntry["预加载入口<br/>src/preload.ts"]
-RendererCfg --> RendererEntry["渲染器入口<br/>src/renderer/main.tsx"]
+RendererCfg --> RendererEntry["渲染器入口<br/>src/renderer/main.ts"]
 MainEntry --> BuildOut["构建输出<br/>.vite/build/main.js"]
 PreloadEntry --> BuildOutPre["构建输出<br/>.vite/build/preload.js"]
 RendererEntry --> DevServer["开发服务器<br/>main_window"]
 ```
 
-图表来源
+**图表来源**
 - [forge.config.js:20-39](file://forge.config.js#L20-L39)
 - [vite.main.config.mjs:1-24](file://vite.main.config.mjs#L1-L24)
 - [vite.preload.config.mjs:1-10](file://vite.preload.config.mjs#L1-L10)
 - [vite.renderer.config.mjs:1-7](file://vite.renderer.config.mjs#L1-L7)
 - [src/main.ts:1-100](file://src/main.ts#L1-L100)
 - [src/preload.ts:1-18](file://src/preload.ts#L1-L18)
-- [src/renderer/main.tsx:1-8](file://src/renderer/main.tsx#L1-L8)
+- [src/renderer/main.ts:1-8](file://src/renderer/main.ts#L1-L8)
 
-章节来源
+**章节来源**
 - [forge.config.js:19-39](file://forge.config.js#L19-L39)
 - [开发文档.md:195-262](file://开发文档.md#L195-L262)
 
@@ -69,7 +79,7 @@ RendererEntry --> DevServer["开发服务器<br/>main_window"]
 - 主进程配置（vite.main.config.mjs）
   - 解析条件与主字段：通过解析条件与主字段控制模块解析行为，确保 Electron 主进程侧的模块解析符合预期。
   - 外部依赖：将 Electron 设为外部依赖，避免打包进主进程产物。
-  - SSR 内联策略：对特定 LangChain 生态与 zod 等包采用“不外部化”策略，确保这些包在 SSR 场景下可被正确打包。
+  - SSR 内联策略：对特定 LangChain 生态与 zod 等包采用"不外部化"策略，确保这些包在 SSR 场景下可被正确打包。
   - 适用场景：主进程代码需要访问 Electron API 且依赖大量 ESM-only 的第三方库。
 
 - 预加载配置（vite.preload.config.mjs）
@@ -77,10 +87,10 @@ RendererEntry --> DevServer["开发服务器<br/>main_window"]
   - 适用场景：预加载脚本仅负责桥接渲染器与主进程，无需复杂前端框架。
 
 - 渲染器配置（vite.renderer.config.mjs）
-  - 插件：启用 React 插件以支持 JSX 与 React 开发体验。
-  - 适用场景：React 应用开发与热更新，配合 Electron Forge 的开发服务器。
+  - 插件：启用 Vue 插件以支持单文件组件与 Vue 开发体验。
+  - 适用场景：Vue 应用开发与热更新，配合 Electron Forge 的开发服务器。
 
-章节来源
+**章节来源**
 - [vite.main.config.mjs:3-23](file://vite.main.config.mjs#L3-L23)
 - [vite.preload.config.mjs:3-9](file://vite.preload.config.mjs#L3-L9)
 - [vite.renderer.config.mjs:4-6](file://vite.renderer.config.mjs#L4-L6)
@@ -104,19 +114,19 @@ Forge->>PreloadCfg : 加载 vite.preload.config.mjs
 Forge->>RendererCfg : 加载 vite.renderer.config.mjs
 Forge->>MainEntry : 编译 src/main.ts
 Forge->>PreloadEntry : 编译 src/preload.ts
-Forge->>RendererEntry : 编译 src/renderer/main.tsx
+Forge->>RendererEntry : 编译 src/renderer/main.ts
 MainEntry-->>Forge : 输出 .vite/build/main.js
 PreloadEntry-->>Forge : 输出 .vite/build/preload.js
 MainWindow->>PreloadEntry : 加载预加载脚本
 MainWindow->>RendererEntry : 加载渲染器页面
-Renderer-->>MainWindow : 渲染 React 应用
+Renderer-->>MainWindow : 渲染 Vue 应用
 ```
 
-图表来源
+**图表来源**
 - [forge.config.js:20-39](file://forge.config.js#L20-L39)
 - [src/main.ts:36-62](file://src/main.ts#L36-L62)
 - [src/preload.ts:1-18](file://src/preload.ts#L1-L18)
-- [src/renderer/main.tsx:1-8](file://src/renderer/main.tsx#L1-L8)
+- [src/renderer/main.ts:1-8](file://src/renderer/main.ts#L1-L8)
 
 ## 详细组件分析
 
@@ -129,7 +139,7 @@ Renderer-->>MainWindow : 渲染 React 应用
 - 外部依赖（rollupOptions.external）
   - 作用：将 Electron 标记为外部依赖，避免将其打包进主进程产物，减少体积并避免重复加载。
 - SSR 设置（ssr.noExternal）
-  - 作用：将 LangChain 生态与 zod 等包标记为“不外部化”，确保这些包在 SSR 场景下被内联打包，解决 CJS/ESM 兼容问题。
+  - 作用：将 LangChain 生态与 zod 等包标记为"不外部化"，确保这些包在 SSR 场景下被内联打包，解决 CJS/ESM 兼容问题。
   - 适用范围：主进程侧的 SSR 打包流程。
 
 ```mermaid
@@ -144,10 +154,10 @@ SkipNoExt --> Output
 Output --> End(["完成"])
 ```
 
-图表来源
+**图表来源**
 - [vite.main.config.mjs:4-22](file://vite.main.config.mjs#L4-L22)
 
-章节来源
+**章节来源**
 - [vite.main.config.mjs:3-23](file://vite.main.config.mjs#L3-L23)
 
 ### 预加载 Vite 配置（vite.preload.config.mjs）
@@ -162,28 +172,28 @@ MarkExternal --> Output["生成预加载产物"]
 Output --> End(["完成"])
 ```
 
-图表来源
+**图表来源**
 - [vite.preload.config.mjs:4-8](file://vite.preload.config.mjs#L4-L8)
 
-章节来源
+**章节来源**
 - [vite.preload.config.mjs:3-9](file://vite.preload.config.mjs#L3-L9)
 
 ### 渲染器 Vite 配置（vite.renderer.config.mjs）
 - 插件（plugins）
-  - 作用：启用 React 插件，支持 JSX 语法与 React 开发体验。
-- 适用场景：React 应用开发与热更新，配合 Electron Forge 的开发服务器。
+  - 作用：启用 Vue 插件，支持单文件组件与 Vue 开发体验。
+- 适用场景：Vue 应用开发与热更新，配合 Electron Forge 的开发服务器。
 
 ```mermaid
 flowchart TD
-Start(["渲染器构建开始"]) --> EnableReact["启用 React 插件"]
-EnableReact --> Output["生成渲染器产物"]
+Start(["渲染器构建开始"]) --> EnableVue["启用 Vue 插件"]
+EnableVue --> Output["生成渲染器产物"]
 Output --> End(["完成"])
 ```
 
-图表来源
+**图表来源**
 - [vite.renderer.config.mjs:4-6](file://vite.renderer.config.mjs#L4-L6)
 
-章节来源
+**章节来源**
 - [vite.renderer.config.mjs:4-6](file://vite.renderer.config.mjs#L4-L6)
 
 ### TypeScript 配置与 Vite 集成
@@ -196,7 +206,7 @@ Output --> End(["完成"])
 - 与 Vite 的协同
   - Vite 通过其内置的 TypeScript 支持处理 TS/TSX 文件，结合 tsconfig.json 的编译选项，确保类型检查与构建一致性。
 
-章节来源
+**章节来源**
 - [tsconfig.json:2-18](file://tsconfig.json#L2-L18)
 - [vite.renderer.config.mjs:5-5](file://vite.renderer.config.mjs#L5-L5)
 
@@ -209,14 +219,14 @@ Output --> End(["完成"])
 - 打包策略
   - asar 启用，将源码打包为 asar 归档，保护源码。
 
-章节来源
+**章节来源**
 - [forge.config.js:20-39](file://forge.config.js#L20-L39)
 - [开发文档.md:195-262](file://开发文档.md#L195-L262)
 
 ## 依赖关系分析
 - 外部依赖与打包策略
   - Electron：在主进程与预加载配置中均标记为外部依赖，避免重复打包。
-  - LangChain 生态与 zod：在主进程 SSR 中设置为“不外部化”，确保这些包被内联打包。
+  - LangChain 生态与 zod：在主进程 SSR 中设置为"不外部化"，确保这些包被内联打包。
 - 模块解析与兼容性
   - 解析条件与主字段的组合提升了对现代包的兼容性，减少因入口字段不匹配导致的解析失败。
 - 与 Electron 的集成
@@ -228,15 +238,15 @@ Electron["Electron"] --> Main["主进程产物"]
 Electron --> Preload["预加载产物"]
 LangChain["@langchain/*"] --> Main
 Zod["zod"] --> Main
-React["React 插件"] --> Renderer["渲染器产物"]
+Vue["Vue 插件"] --> Renderer["渲染器产物"]
 ```
 
-图表来源
+**图表来源**
 - [vite.main.config.mjs:10-21](file://vite.main.config.mjs#L10-L21)
 - [vite.preload.config.mjs:6-6](file://vite.preload.config.mjs#L6-L6)
 - [vite.renderer.config.mjs:5-5](file://vite.renderer.config.mjs#L5-L5)
 
-章节来源
+**章节来源**
 - [vite.main.config.mjs:9-22](file://vite.main.config.mjs#L9-L22)
 - [vite.preload.config.mjs:4-8](file://vite.preload.config.mjs#L4-L8)
 - [vite.renderer.config.mjs:4-6](file://vite.renderer.config.mjs#L4-L6)
@@ -245,11 +255,11 @@ React["React 插件"] --> Renderer["渲染器产物"]
 - 外部依赖与体积控制
   - 将 Electron 标记为外部依赖，避免重复打包，降低主进程与预加载产物体积。
 - 内联策略与兼容性权衡
-  - 对 LangChain 生态与 zod 采用“不外部化”策略，虽然会增加体积，但能显著减少运行时兼容性问题。
+  - 对 LangChain 生态与 zod 采用"不外部化"策略，虽然会增加体积，但能显著减少运行时兼容性问题。
 - 模块解析优化
   - 合理设置解析条件与主字段，减少不必要的解析尝试，提升构建速度。
 - 开发体验
-  - 渲染器启用 React 插件，结合 Electron Forge 的开发服务器，提供快速热更新体验。
+  - 渲染器启用 Vue 插件，结合 Electron Forge 的开发服务器，提供快速热更新体验。
 
 ## 故障排除指南
 - SSR 场景下包未被正确打包
@@ -260,9 +270,9 @@ React["React 插件"] --> Renderer["渲染器产物"]
   - 现象：无法访问 window.electron 或 ipcRenderer。
   - 排查：确认外部依赖配置是否正确，Electron 是否被标记为 external；同时检查主进程 preload 配置与窗口创建逻辑。
   - 参考位置：[vite.preload.config.mjs:4-8](file://vite.preload.config.mjs#L4-L8)，[src/main.ts:44-47](file://src/main.ts#L44-L47)
-- 渲染器无法识别 JSX
-  - 现象：TypeScript 报错 JSX 未定义。
-  - 排查：确认已启用 React 插件并设置正确的 JSX 编译选项。
+- 渲染器无法识别单文件组件
+  - 现象：Vue 单文件组件编译错误。
+  - 排查：确认已启用 Vue 插件并设置正确的组件编译选项。
   - 参考位置：[vite.renderer.config.mjs:5-5](file://vite.renderer.config.mjs#L5-L5)，[tsconfig.json:6-6](file://tsconfig.json#L6-L6)
 - 构建后资源路径错误
   - 现象：开发环境正常，打包后静态资源 404。
@@ -270,7 +280,9 @@ React["React 插件"] --> Renderer["渲染器产物"]
   - 参考位置：[forge.config.js:33-38](file://forge.config.js#L33-L38)，[src/main.ts:50-57](file://src/main.ts#L50-L57)
 
 ## 结论
-langGraph 的 Vite 构建配置围绕 Electron 的三大角色进行了精细化拆分：主进程侧重 SSR 兼容与外部依赖控制，预加载强调最小化打包与 API 暴露，渲染器聚焦 React 开发体验。通过 Electron Forge 的插件绑定与 TypeScript 的严格配置，整体构建链路具备良好的可维护性与扩展性。根据实际业务需求，可在解析条件、外部依赖与内联策略上进一步优化，以平衡体积、性能与兼容性。
+langGraph 的 Vite 构建配置围绕 Electron 的三大角色进行了精细化拆分：主进程侧重 SSR 兼容与外部依赖控制，预加载强调最小化打包与 API 暴露，渲染器聚焦 Vue 开发体验。通过 Electron Forge 的插件绑定与 TypeScript 的严格配置，整体构建链路具备良好的可维护性与扩展性。根据实际业务需求，可在解析条件、外部依赖与内联策略上进一步优化，以平衡体积、性能与兼容性。
+
+**更新** 本次构建系统现代化迁移显著提升了开发效率和构建性能，Vite 的快速热更新和优化的打包策略为项目带来了更好的开发体验。
 
 ## 附录
 - 自定义构建选项建议
