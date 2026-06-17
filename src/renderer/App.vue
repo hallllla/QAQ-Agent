@@ -3,9 +3,11 @@ import { ref, onMounted, onUnmounted } from 'vue';
 import type { Message, ToolEvent, AgentSettings } from './types';
 import ChatWindow from './components/ChatWindow.vue';
 import SettingsPanel from './components/SettingsPanel.vue';
+import KnowledgePanel from './components/KnowledgePanel.vue';
 
 const messages = ref<Message[]>([]);
 const showSettings = ref(false);
+const showKnowledge = ref(false);
 const settings = ref<AgentSettings>({
   provider: 'openai',
   apiKey: '',
@@ -93,7 +95,7 @@ const handleClearChat = () => {
     <header class="app-header">
       <div class="header-left">
         <div class="logo">🤖</div>
-        <h1>LangGraph Agent</h1>
+        <h1>QAQ</h1>
       </div>
       <div class="header-right">
         <button
@@ -105,8 +107,16 @@ const handleClearChat = () => {
         </button>
         <button
           class="header-btn"
+          :class="{ active: showKnowledge }"
+          @click="showKnowledge = !showKnowledge; showSettings = false"
+          title="知识库"
+        >
+          📚 知识库
+        </button>
+        <button
+          class="header-btn"
           :class="{ active: showSettings }"
-          @click="showSettings = !showSettings"
+          @click="showSettings = !showSettings; showKnowledge = false"
           title="设置"
         >
           ⚙️ 设置
@@ -121,6 +131,12 @@ const handleClearChat = () => {
         :settings="settings"
         @save="handleSaveSettings"
         @close="showSettings = false"
+      />
+
+      <!-- 知识库面板 -->
+      <KnowledgePanel
+        v-if="showKnowledge"
+        @close="showKnowledge = false"
       />
 
       <!-- 聊天窗口 -->

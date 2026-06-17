@@ -30,6 +30,26 @@ export interface Message {
   isError?: boolean;
 }
 
+export interface KnowledgeDocument {
+  id: string;
+  name: string;
+  filePath: string;
+  addedAt: string;
+  chunkCount: number;
+}
+
+export interface KBStats {
+  documentCount: number;
+  chunkCount: number;
+}
+
+export interface KBProgressEvent {
+  type: 'indexing' | 'done' | 'error';
+  fileName: string;
+  chunkCount?: number;
+  error?: string;
+}
+
 export interface ElectronAPI {
   chat: (message: string) => Promise<{
     success: boolean;
@@ -39,6 +59,17 @@ export interface ElectronAPI {
   onToolEvent: (callback: (event: ToolEvent) => void) => () => void;
   getSettings: () => Promise<AgentSettings>;
   saveSettings: (settings: AgentSettings) => Promise<boolean>;
+  kb: {
+    getDocuments: () => Promise<KnowledgeDocument[]>;
+    addDocument: () => Promise<{
+      success: boolean;
+      data?: KnowledgeDocument[];
+      error?: string;
+    }>;
+    removeDocument: (docId: string) => Promise<{ success: boolean }>;
+    getStats: () => Promise<KBStats>;
+    onProgress: (callback: (event: KBProgressEvent) => void) => () => void;
+  };
 }
 
 declare global {

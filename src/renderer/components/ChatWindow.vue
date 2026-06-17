@@ -75,7 +75,7 @@ const handleSuggestion = (text: string) => {
     <div class="messages-container">
       <div v-if="messages.length === 0" class="empty-state">
         <div class="empty-icon">🤖</div>
-        <h2>LangGraph Agent</h2>
+        <h2>QAQ</h2>
         <p>一个基于 LangGraph 的桌面 AI 助手</p>
         <div class="suggestions">
           <button @click="handleSuggestion('帮我算一下 (123 + 456) * 7 等于多少')">

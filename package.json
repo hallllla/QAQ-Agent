@@ -1,7 +1,7 @@
 {
-  "name": "langgraph-agent",
+  "name": "qaq",
   "version": "1.0.0",
-  "description": "LangGraph + Electron 桌面端 AI Agent 应用",
+  "description": "QAQ - 桌面端 AI Agent 应用 (LangGraph + Electron)",
   "main": ".vite/build/main.js",
   "scripts": {
     "start": "electron-forge start",
@@ -15,6 +15,7 @@
     "@langchain/langgraph": "^0.2.44",
     "@langchain/ollama": "^0.1.4",
     "@langchain/openai": "^0.3.17",
+    "@langchain/textsplitters": "^0.1.0",
     "vue": "^3.5.13",
     "zod": "^3.23.8"
   },

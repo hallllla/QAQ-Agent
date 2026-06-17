@@ -12,6 +12,7 @@ import { ChatOpenAI } from '@langchain/openai';
 import { ChatOllama } from '@langchain/ollama';
 import { StateGraph, Annotation, END } from '@langchain/langgraph';
 import { z } from 'zod';
+import { knowledgeBase } from './knowledge.js';
 
 // ============================================================
 // 类型定义
@@ -134,6 +135,35 @@ const randomTool = tool(
   }
 );
 
+// 知识库搜索工具 - 动态创建，需要 settings
+function createKnowledgeSearchTool(settings: AgentSettings) {
+  return tool(
+    async ({ query }) => {
+      const stats = knowledgeBase.getStats();
+      if (stats.chunkCount === 0) {
+        return '知识库为空，请先在知识库管理中添加文档。';
+      }
+      const results = await knowledgeBase.search(query, settings, 5);
+      if (results.length === 0) {
+        return '未在知识库中找到相关信息。';
+      }
+      return results
+        .map(
+          (r, i) =>
+            `[${i + 1}] 来源: ${r.docName} (相似度: ${(r.score * 100).toFixed(1)}%)\n${r.content}`
+        )
+        .join('\n\n---\n\n');
+    },
+    {
+      name: 'knowledge_search',
+      description: '搜索知识库中的相关文档和信息。当用户的问题可能涉及知识库内容时使用此工具',
+      schema: z.object({
+        query: z.string().describe('搜索查询语句'),
+      }),
+    }
+  );
+}
+
 const ALL_TOOLS = [calculatorTool, dateTimeTool, textAnalysisTool, randomTool];
 
 // ============================================================
@@ -172,7 +202,14 @@ export function buildAgentGraph(
   settings: AgentSettings,
   onToolEvent?: (event: ToolEvent) => void
 ) {
-  const llm = createModel(settings).bindTools(ALL_TOOLS);
+  const allTools = [
+    calculatorTool,
+    dateTimeTool,
+    textAnalysisTool,
+    randomTool,
+    createKnowledgeSearchTool(settings),
+  ];
+  const llm = createModel(settings).bindTools(allTools);
 
   // --- 节点函数 ---
   async function agentNode(
@@ -192,7 +229,7 @@ export function buildAgentGraph(
     for (const call of toolCalls) {
       const toolName = call.name;
       const toolArgs = call.args as Record<string, any>;
-      const foundTool = ALL_TOOLS.find((t) => t.name === toolName);
+      const foundTool = allTools.find((t) => t.name === toolName);
 
       onToolEvent?.({
         type: 'tool_start',
@@ -265,15 +302,17 @@ export function buildAgentGraph(
 // 执行 Agent
 // ============================================================
 
-const SYSTEM_PROMPT = `你是一个强大的桌面 AI 助手，运行在用户的 Windows 桌面上。你可以帮助用户完成各种任务。
+const SYSTEM_PROMPT = `你是一个强大的桌面 AI 助手，名为 QAQ，运行在用户的 Windows 桌面上。你可以帮助用户完成各种任务。
 
 你可以使用以下工具:
 - calculator: 执行数学计算
 - get_datetime: 获取当前日期和时间
 - text_analysis: 分析文本统计信息
 - random_number: 生成随机数
+- knowledge_search: 搜索知识库中的相关文档和信息
 
 当用户的问题需要使用工具时，请调用相应的工具来获取信息。
+如果用户的问题可能与知识库内容相关，请优先使用 knowledge_search 工具检索相关信息。
 请用中文回答用户的问题。回答要简洁、专业、有条理。`;
 
 export async function runAgent(

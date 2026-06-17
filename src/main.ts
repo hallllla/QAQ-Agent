@@ -1,7 +1,8 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import { runAgent, type AgentSettings, type ToolEvent } from './agent.js';
+import { knowledgeBase } from './knowledge.js';
 
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string;
 declare const MAIN_WINDOW_VITE_NAME: string;
@@ -39,7 +40,7 @@ const createWindow = () => {
     height: 750,
     minWidth: 800,
     minHeight: 600,
-    title: 'LangGraph Agent',
+    title: 'QAQ',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -61,7 +62,7 @@ const createWindow = () => {
   });
 };
 
-// --- IPC 处理 ---
+// --- Agent IPC ---
 ipcMain.handle('agent:chat', async (_event, message: string) => {
   try {
     const results = await runAgent(message, currentSettings, (event: ToolEvent) => {
@@ -73,14 +74,72 @@ ipcMain.handle('agent:chat', async (_event, message: string) => {
   }
 });
 
-ipcMain.handle('settings:get', () => {
-  return currentSettings;
-});
+// --- 设置 IPC ---
+ipcMain.handle('settings:get', () => currentSettings);
 
 ipcMain.handle('settings:save', (_event, settings: AgentSettings) => {
   currentSettings = settings;
   saveSettings(settings);
   return true;
+});
+
+// --- 知识库 IPC ---
+ipcMain.handle('kb:get-documents', () => {
+  return knowledgeBase.getDocuments();
+});
+
+ipcMain.handle('kb:add-document', async () => {
+  if (!mainWindow) return { success: false, error: '窗口未就绪' };
+
+  // 打开文件选择对话框
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: '选择要添加到知识库的文件',
+    properties: ['openFile', 'multiSelections'],
+    filters: [
+      { name: '文本文件', extensions: ['txt', 'md', 'csv', 'json', 'log'] },
+      { name: '代码文件', extensions: ['js', 'ts', 'py', 'java', 'go', 'rs', 'html', 'css', 'yaml', 'yml', 'xml'] },
+      { name: '所有文件', extensions: ['*'] },
+    ],
+  });
+
+  if (result.canceled || result.filePaths.length === 0) {
+    return { success: false, error: '未选择文件' };
+  }
+
+  const addedDocs: any[] = [];
+  for (const filePath of result.filePaths) {
+    try {
+      mainWindow.webContents.send('kb:progress', {
+        type: 'indexing',
+        fileName: path.basename(filePath),
+      });
+      const doc = await knowledgeBase.addDocument(filePath, currentSettings);
+      addedDocs.push(doc);
+      mainWindow.webContents.send('kb:progress', {
+        type: 'done',
+        fileName: path.basename(filePath),
+        chunkCount: doc.chunkCount,
+      });
+    } catch (e: any) {
+      mainWindow.webContents.send('kb:progress', {
+        type: 'error',
+        fileName: path.basename(filePath),
+        error: e.message,
+      });
+      return { success: false, error: `索引 ${path.basename(filePath)} 失败: ${e.message}` };
+    }
+  }
+
+  return { success: true, data: addedDocs };
+});
+
+ipcMain.handle('kb:remove-document', (_event, docId: string) => {
+  const ok = knowledgeBase.removeDocument(docId);
+  return { success: ok };
+});
+
+ipcMain.handle('kb:get-stats', () => {
+  return knowledgeBase.getStats();
 });
 
 // --- 应用生命周期 ---

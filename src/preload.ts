@@ -14,4 +14,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // 设置
   getSettings: () => ipcRenderer.invoke('settings:get'),
   saveSettings: (settings: any) => ipcRenderer.invoke('settings:save', settings),
+
+  // 知识库
+  kb: {
+    getDocuments: () => ipcRenderer.invoke('kb:get-documents'),
+    addDocument: () => ipcRenderer.invoke('kb:add-document'),
+    removeDocument: (docId: string) => ipcRenderer.invoke('kb:remove-document', docId),
+    getStats: () => ipcRenderer.invoke('kb:get-stats'),
+    onProgress: (callback: (data: any) => void) => {
+      const listener = (_event: any, data: any) => callback(data);
+      ipcRenderer.on('kb:progress', listener);
+      return () => ipcRenderer.removeListener('kb:progress', listener);
+    },
+  },
 });
