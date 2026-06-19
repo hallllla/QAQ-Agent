@@ -1,6 +1,14 @@
 import fs from 'fs';
 import path from 'path';
-import { app } from 'electron';
+import { createRequire } from 'module';
+
+const _require = createRequire(import.meta.url);
+let userDataDir = '';
+try {
+  userDataDir = _require('electron').app.getPath('userData');
+} catch {
+  userDataDir = path.resolve(process.cwd(), 'data');
+}
 
 // ============================================================
 // 类型定义
@@ -97,7 +105,7 @@ class SkillsManager {
   private dataPath: string;
 
   constructor() {
-    const dir = path.join(app.getPath('userData'), 'skills');
+    const dir = path.join(userDataDir, 'skills');
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     this.dataPath = path.join(dir, 'skills.json');
     this.load();

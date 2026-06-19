@@ -1,13 +1,17 @@
 {
   "name": "qaq",
   "version": "1.0.0",
-  "description": "QAQ - 桌面端 AI Agent 应用 (LangGraph + Electron)",
+  "description": "QAQ - 桌面端 / Web 端 AI Agent 应用 (LangGraph + Electron)",
   "main": ".vite/build/main.js",
   "scripts": {
     "start": "electron-forge start",
     "package": "electron-forge package",
     "make": "electron-forge make",
     "publish": "electron-forge publish",
+    "dev:server": "tsx src/server.ts",
+    "dev:web": "concurrently -n server,web -c blue,green \"tsx src/server.ts\" \"vite --config vite.web.config.mjs\"",
+    "build:web": "vite build --config vite.web.config.mjs",
+    "start:web": "node dist-server/server.js",
     "lint": "echo 'No lint configured'"
   },
   "dependencies": {
@@ -18,7 +22,11 @@
     "@langchain/textsplitters": "^0.1.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "zod": "^3.23.8"
+    "zod": "^3.23.8",
+    "express": "^4.21.1",
+    "ws": "^8.18.0",
+    "cors": "^2.8.5",
+    "multer": "^1.4.5-lts.1"
   },
   "devDependencies": {
     "@electron-forge/cli": "^7.6.0",
@@ -31,6 +39,12 @@
     "@vitejs/plugin-react": "^4.3.4",
     "electron": "^33.2.1",
     "typescript": "^5.6.3",
-    "vite": "^6.0.3"
+    "vite": "^6.0.3",
+    "@types/express": "^5.0.0",
+    "@types/ws": "^8.5.13",
+    "@types/cors": "^2.8.17",
+    "@types/multer": "^1.4.12",
+    "tsx": "^4.19.2",
+    "concurrently": "^9.1.0"
   }
 }

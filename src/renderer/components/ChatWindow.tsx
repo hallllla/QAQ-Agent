@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import type { Message, ChatAttachment } from '../types';
+import { api } from '../api';
 import MessageBubble from './MessageBubble';
 
 interface Props {
@@ -52,7 +53,7 @@ export default function ChatWindow({ messages, onSend }: Props) {
   const handleSuggestion = (text: string) => onSend(text);
 
   const handlePickImage = async () => {
-    const result = await window.electronAPI.media.pickImage();
+    const result = await api.media.pickImage();
     if (result) {
       setPendingAttachments(prev => [...prev, {
         id: `img-${Date.now()}`, type: 'image', name: result.name,
@@ -62,7 +63,7 @@ export default function ChatWindow({ messages, onSend }: Props) {
   };
 
   const handlePickFile = async () => {
-    const result = await window.electronAPI.media.pickFile();
+    const result = await api.media.pickFile();
     if (result) {
       setPendingAttachments(prev => [...prev, {
         id: `file-${Date.now()}`, type: 'file', name: result.name,

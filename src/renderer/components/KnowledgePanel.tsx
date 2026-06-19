@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import type { KnowledgeDocument, KBStats, KBProgressEvent } from '../types';
+import { api } from '../api';
 
 interface Props {
   onClose: () => void;
@@ -13,16 +14,16 @@ const KnowledgePanel: React.FC<Props> = ({ onClose }) => {
   const cleanupRef = useRef<(() => void) | null>(null);
 
   const refresh = useCallback(async () => {
-    const docs = await window.electronAPI.kb.getDocuments();
+    const docs = await api.kb.getDocuments();
     setDocuments(docs);
-    const s = await window.electronAPI.kb.getStats();
+    const s = await api.kb.getStats();
     setStats(s);
   }, []);
 
   useEffect(() => {
     refresh();
 
-    cleanupRef.current = window.electronAPI.kb.onProgress((event: KBProgressEvent) => {
+    cleanupRef.current = api.kb.onProgress((event: KBProgressEvent) => {
       if (event.type === 'indexing') {
         setProgressMsg(`正在索引: ${event.fileName}...`);
       } else if (event.type === 'done') {
@@ -44,7 +45,7 @@ const KnowledgePanel: React.FC<Props> = ({ onClose }) => {
     setIsLoading(true);
     setProgressMsg('正在选择文件...');
     try {
-      const result = await window.electronAPI.kb.addDocument();
+      const result = await api.kb.addDocument();
       if (result.success) {
         setProgressMsg(`成功添加 ${result.data!.length} 个文档`);
         await refresh();
@@ -64,7 +65,7 @@ const KnowledgePanel: React.FC<Props> = ({ onClose }) => {
 
   const handleRemove = async (doc: KnowledgeDocument) => {
     if (!confirm(`确定删除「${doc.name}」吗？`)) return;
-    await window.electronAPI.kb.removeDocument(doc.id);
+    await api.kb.removeDocument(doc.id);
     await refresh();
   };
 

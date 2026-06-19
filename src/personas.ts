@@ -1,6 +1,14 @@
 import fs from 'fs';
 import path from 'path';
-import { app } from 'electron';
+import { createRequire } from 'module';
+
+const _require = createRequire(import.meta.url);
+let userDataDir = '';
+try {
+  userDataDir = _require('electron').app.getPath('userData');
+} catch {
+  userDataDir = path.resolve(process.cwd(), 'data');
+}
 
 // ============================================================
 // 类型定义
@@ -102,7 +110,7 @@ class PersonaManager {
   private activePath: string;
 
   constructor() {
-    const dir = path.join(app.getPath('userData'), 'personas');
+    const dir = path.join(userDataDir, 'personas');
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     this.dataPath = path.join(dir, 'personas.json');
     this.activePath = path.join(dir, 'active.json');

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { Skill } from '../types';
+import { api } from '../api';
 
 interface Props {
   onClose: () => void;
@@ -22,12 +23,12 @@ const SkillsPanel: React.FC<Props> = ({ onClose }) => {
   }, []);
 
   const refresh = async () => {
-    const all = await window.electronAPI.skills.getAll();
+    const all = await api.skills.getAll();
     setSkills(all);
   };
 
   const handleToggle = async (skill: Skill) => {
-    await window.electronAPI.skills.toggle(skill.id, !skill.enabled);
+    await api.skills.toggle(skill.id, !skill.enabled);
     await refresh();
   };
 
@@ -52,9 +53,9 @@ const SkillsPanel: React.FC<Props> = ({ onClose }) => {
   const handleSave = async () => {
     if (!form.name.trim()) return;
     if (editingId) {
-      await window.electronAPI.skills.updateSkill(editingId, { ...form });
+      await api.skills.updateSkill(editingId, { ...form });
     } else {
-      await window.electronAPI.skills.addSkill({
+      await api.skills.addSkill({
         ...form,
         parameters: [],
       });
@@ -66,7 +67,7 @@ const SkillsPanel: React.FC<Props> = ({ onClose }) => {
   const handleRemove = async (skill: Skill) => {
     if (skill.isBuiltIn) return;
     if (!confirm(`确定删除技能「${skill.name}」吗？`)) return;
-    await window.electronAPI.skills.removeSkill(skill.id);
+    await api.skills.removeSkill(skill.id);
     await refresh();
   };
 

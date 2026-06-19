@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { AgentPersona } from '../types';
+import { api } from '../api';
 
 interface Props {
   onClose: () => void;
@@ -20,15 +21,15 @@ const PersonaPanel: React.FC<Props> = ({ onClose, onSwitch }) => {
 
   useEffect(() => {
     (async () => {
-      const all = await window.electronAPI.personas.getAll();
+      const all = await api.personas.getAll();
       setPersonas(all);
-      const active = await window.electronAPI.personas.getActive();
+      const active = await api.personas.getActive();
       setActiveId(active.id);
     })();
   }, []);
 
   const handleSwitch = async (persona: AgentPersona) => {
-    await window.electronAPI.personas.setActive(persona.id);
+    await api.personas.setActive(persona.id);
     setActiveId(persona.id);
     onSwitch(persona);
   };
@@ -53,11 +54,11 @@ const PersonaPanel: React.FC<Props> = ({ onClose, onSwitch }) => {
   const handleSave = async () => {
     if (!form.name.trim()) return;
     if (editingId) {
-      await window.electronAPI.personas.updatePersona(editingId, { ...form });
+      await api.personas.updatePersona(editingId, { ...form });
     } else {
-      await window.electronAPI.personas.addCustom({ ...form });
+      await api.personas.addCustom({ ...form });
     }
-    const all = await window.electronAPI.personas.getAll();
+    const all = await api.personas.getAll();
     setPersonas(all);
     setShowForm(false);
   };
@@ -65,11 +66,11 @@ const PersonaPanel: React.FC<Props> = ({ onClose, onSwitch }) => {
   const handleRemove = async (persona: AgentPersona) => {
     if (persona.isBuiltIn) return;
     if (!confirm(`确定删除「${persona.name}」吗？`)) return;
-    await window.electronAPI.personas.removePersona(persona.id);
-    const all = await window.electronAPI.personas.getAll();
+    await api.personas.removePersona(persona.id);
+    const all = await api.personas.getAll();
     setPersonas(all);
     if (activeId === persona.id) {
-      const active = await window.electronAPI.personas.getActive();
+      const active = await api.personas.getActive();
       setActiveId(active.id);
     }
   };

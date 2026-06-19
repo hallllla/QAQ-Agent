@@ -1,10 +1,18 @@
 import fs from 'fs';
 import path from 'path';
-import { app } from 'electron';
+import { createRequire } from 'module';
 import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
 import { OpenAIEmbeddings } from '@langchain/openai';
 import { OllamaEmbeddings } from '@langchain/ollama';
 import type { AgentSettings } from './agent.js';
+
+const _require = createRequire(import.meta.url);
+let userDataDir = '';
+try {
+  userDataDir = _require('electron').app.getPath('userData');
+} catch {
+  userDataDir = path.resolve(process.cwd(), 'data');
+}
 
 // ============================================================
 // 类型定义
@@ -45,7 +53,7 @@ class KnowledgeBaseManager {
   private chunksPath: string;
 
   constructor() {
-    this.kbDir = path.join(app.getPath('userData'), 'knowledge-base');
+    this.kbDir = path.join(userDataDir, 'knowledge-base');
     this.metaPath = path.join(this.kbDir, 'documents.json');
     this.chunksPath = path.join(this.kbDir, 'chunks.json');
     this.load();

@@ -161,6 +161,9 @@ export interface ElectronAPI {
   };
 }
 
+/** QAQAPI 是 ElectronAPI 的别名，用于 Web 模式 */
+export type QAQAPI = ElectronAPI;
+
 declare global {
   interface Window {
     electronAPI: ElectronAPI;

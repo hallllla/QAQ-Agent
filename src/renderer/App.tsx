@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { Message, ToolEvent, AgentSettings, ChatAttachment, AgentPersona } from './types';
+import { api } from './api';
 import ChatWindow from './components/ChatWindow';
 import SettingsPanel from './components/SettingsPanel';
 import KnowledgePanel from './components/KnowledgePanel';
@@ -28,14 +29,14 @@ export default function App() {
 
   useEffect(() => {
     (async () => {
-      const saved = await window.electronAPI.getSettings();
+      const saved = await api.getSettings();
       if (saved) {
         setSettings(s => ({ ...saved, maxContextMessages: saved.maxContextMessages || 20 }));
       }
-      const persona = await window.electronAPI.personas.getActive();
+      const persona = await api.personas.getActive();
       setActivePersona(persona);
 
-      cleanupRef.current = window.electronAPI.onToolEvent((event: ToolEvent) => {
+      cleanupRef.current = api.onToolEvent((event: ToolEvent) => {
         setMessages(prev => {
           const idx = prev.findIndex(m => m.role === 'assistant' && m.isLoading);
           if (idx === -1) return prev;
@@ -84,7 +85,7 @@ export default function App() {
       type: a.type,
     }));
 
-    const result = await window.electronAPI.chatWithHistory(
+    const result = await api.chatWithHistory(
       text, apiAttachments, chatHistory
     );
 
@@ -102,7 +103,7 @@ export default function App() {
   };
 
   const handleSaveSettings = async (newSettings: AgentSettings) => {
-    await window.electronAPI.saveSettings(newSettings);
+    await api.saveSettings(newSettings);
     setSettings(newSettings);
     setActivePanel(null);
   };
